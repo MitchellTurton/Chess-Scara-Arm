@@ -1,0 +1,1 @@
+from stockfish import Stockfish
