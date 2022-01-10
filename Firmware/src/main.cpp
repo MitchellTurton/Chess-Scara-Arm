@@ -59,6 +59,13 @@ void loop() {
     } else {
       num_steps_str += c;
     }
+  }
 
+  if (motor_id.length() + num_steps_str.length() == 0) {
+    int num_steps = num_steps_str.toInt();
+
+    Serial.println("Motor: " + motor_id + " Number of Steps: " + num_steps_str);
+
+    step_stepper(motor_id.toInt(), num_steps);
   }
 }
