@@ -1,8 +1,0 @@
-﻿"Platform Diameter"= 150mm'Used in J1
-"Platform Thickness"= 10mm
-"Guide Rod Diameter"= 5mm'Used in J1
-"Elevator Height" = 220mm
-"Top Thickness"= 5mm
-"Guide Rod Length"= "Elevator Height" - "Platform Thickness" - "Top Thickness"
-"Elevator Screw Diameter"= 7.5mm
-"Guide Rod Offset"= 10mm
