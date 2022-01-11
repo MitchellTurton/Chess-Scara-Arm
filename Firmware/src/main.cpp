@@ -1,33 +1,23 @@
 #include <Arduino.h>
+#include "Joint.hpp"
 
-int step_pins[] {3, 5, 6};
-int dir_pins[] {2, 4, 6};
+Joint joint[] {RotationJoint(2.0, 2, 3, 400), RotationJoint(2.0, 4, 5, 400), LinearJoint(8, 6, 7, 400)};
+float J1 = 0;
+float J2 = 0;
 
-int steps_per_rev[] {400, 400, 400};
 
-void step_stepper(int motor_id, int num_steps, float rpm=120) {
+void calc_angles(float x, float y) {
+  int l1 = 150;
+  int l2 = 200;
+  float d = sqrt(x*x + y*y);
 
-  float step_delay = (60 / (steps_per_rev[motor_id] * rpm)) * 1000000;
+  double theta1 = acos((l1*l1 + d*d - l2*l2) / (2*l1*d));
+  double theta2 = acos((l2*l2 + l1*l1 - d*d) / (2*l2*l1));
 
-  digitalWrite(dir_pins[motor_id], (num_steps < 0) ? LOW : HIGH);
+  J1 = theta1 + acos(x/d);
+  J2 = theta2 - (PI/2);
 
-  for (int i = 0; i < num_steps; i++) {
-    digitalWrite(step_pins[motor_id], HIGH);
-    delayMicroseconds(step_delay);
-    digitalWrite(step_pins[motor_id], LOW);
-    delayMicroseconds(step_delay);
-  }
-}
-
-void step_angle(int motor_id, int angle, float rpm=120) {
-  /*
-  Steps a stepper motor a certain angle
-  */
-  float step_angle = 360 / steps_per_rev[motor_id];
-
-  float num_steps = angle / step_angle;
-
-  step_stepper(motor_id, num_steps, rpm);
+  Serial.print("J1: "); Serial.print(theta1); Serial.print(" J2: "); Serial.println(theta2);
 }
 
 void setup() {
@@ -37,8 +27,8 @@ void setup() {
   Serial.println("Starting...");
 
   for (int i = 0; i < 3; i++) {
-    pinMode(step_pins[i], INPUT);
-    pinMode(dir_pins[i], INPUT);
+    pinMode(joint[i].getDirPin(), OUTPUT);
+    pinMode(joint[i].getStepPin(), OUTPUT);
   }
 }
 
@@ -48,6 +38,9 @@ void loop() {
   String motor_id = "";
   String num_steps_str = "";
 
+  String x_val = "";
+  String y_val = "";
+
   bool is_motor_char = true;
   while (Serial.available()) {
     char c = Serial.read();
@@ -55,17 +48,27 @@ void loop() {
     if (c == ' ') { is_motor_char = false; }
 
     if (is_motor_char) {
-      motor_id += c;
+      // motor_id += c;
+      x_val += c;
     } else {
-      num_steps_str += c;
+      // num_steps_str += c;
+      y_val += c;
     }
+
+    delay(2);
   }
 
-  if (motor_id.length() + num_steps_str.length() == 0) {
-    int num_steps = num_steps_str.toInt();
+  // if (motor_id.length() + num_steps_str.length() > 0) {
+  //   int num_steps = num_steps_str.toInt();
 
-    Serial.println("Motor: " + motor_id + " Number of Steps: " + num_steps_str);
+  //   Serial.println("Motor: " + motor_id + " Number of Steps: " + num_steps_str);
 
-    step_stepper(motor_id.toInt(), num_steps);
+  //   joint[motor_id.toInt()].step_motor(num_steps);
+  // }
+
+  if (x_val.length() + y_val.length() > 0) {
+    Serial.println("X: " + x_val + " Y: " + y_val);
+
+    calc_angles(x_val.toInt(), y_val.toInt());
   }
 }

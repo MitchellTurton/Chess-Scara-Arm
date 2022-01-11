@@ -6,18 +6,42 @@ Joint::Joint(int dir_pin, int step_pin, int steps_per_rev, int rpm=120) {
     this->dir_pin = dir_pin;
     this->steps_per_rev = steps_per_rev;
     this->rpm = rpm;
+    this->time_per_step = (60000000 / (rpm * steps_per_rev));
+
+    this->isHigh = true;
+    this->isStepping = false;
+    this->next_step_time = 0;
+    this->needed_steps = 0;
 }
 
 void Joint::step_motor(int numSteps) {
-    float step_delay = (60 / (this->steps_per_rev * this->rpm)) * 1000000;
+    Serial.println("HI");
 
     digitalWrite(this->dir_pin, (numSteps < 0) ? LOW : HIGH);
 
-    for (int i = 0; i < numSteps; i++) {
+    for (int i = 0; i < abs(numSteps); i++) {
         digitalWrite(this->step_pin, HIGH);
-        delayMicroseconds(step_delay);
+        delayMicroseconds(this->time_per_step);
         digitalWrite(this->step_pin, LOW);
-        delayMicroseconds(step_delay);
+        delayMicroseconds(this->time_per_step);
+    }
+}
+
+void Joint::update() {
+    if (micros() >= this->next_step_time && this->isStepping) {
+
+        digitalWrite(this->step_pin, (this->isHigh) ? HIGH : LOW);
+
+        this->isHigh = !this->isHigh;
+
+        needed_steps--;
+
+        if (needed_steps == 0) {
+            this->isStepping = false;
+            this->next_step_time = 0;
+        } else {
+            this->next_step_time = micros() + this->time_per_step;
+        }
     }
 }
 
@@ -29,8 +53,15 @@ int Joint::getStepsPerRev() { return this->steps_per_rev; }
 
 float Joint::getRpm() { return this->rpm; }
 
-void Joint::setRpm(float rpm) { this->rpm = rpm; }
+void Joint::setRpm(float rpm) { 
+    this->rpm = rpm;
+    this->time_per_step = (60000000 / (rpm * steps_per_rev)); 
+}
 
+void Joint::setNeededSteps(int steps) {
+    this->needed_steps = steps;
+    this->isStepping = true;
+}
 
 // RotationJoint ----------------------------------------------------
 

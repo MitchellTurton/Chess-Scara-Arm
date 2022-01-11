@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "../../Software (Laptop)"
+		},
+		{
+			"path": "../../Firmware (Arduino)"
+		},
+		{
+			"name": "Firmware",
+			"path": ".."
+		}
+	],
+	"settings": {}
+}
