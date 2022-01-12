@@ -10,7 +10,7 @@ class Joint {
     Joint(int dir_pin, int step_pin, int steps_per_rev, int rpm=120);
     
     void step_motor(int numSteps);
-    void update();
+    virtual void update();
 
     int getDirPin();
     int getStepPin();
@@ -19,12 +19,14 @@ class Joint {
     float getRpm();
 
     void setRpm(float rpm);
+    void setDir(int dir);
     void setNeededSteps(int steps);
 
     protected:
 
     int step_pin;
     int dir_pin;
+    int direction;
     int steps_per_rev;
 
     int rpm;
@@ -44,7 +46,9 @@ class RotationJoint : public Joint {
     RotationJoint(float gear_ratio, int dir_pin, int step_pin,
                   int steps_per_rev, int rpm=120);
 
-    void step_angle(float angle);
+    void step_motor_angle(float angle);
+
+    void update();
 
     float getCurrAngle();
     float getTargetAngle();
@@ -56,6 +60,8 @@ class RotationJoint : public Joint {
 
     float curr_angle;
     float target_angle;
+
+    float step_angle;
 
     float gear_ratio;
 };

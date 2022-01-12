@@ -4,6 +4,7 @@
 Joint::Joint(int dir_pin, int step_pin, int steps_per_rev, int rpm=120) {
     this->step_pin = step_pin;
     this->dir_pin = dir_pin;
+    this->direction = 0;
     this->steps_per_rev = steps_per_rev;
     this->rpm = rpm;
     this->time_per_step = (60000000 / (rpm * steps_per_rev));
@@ -58,9 +59,19 @@ void Joint::setRpm(float rpm) {
     this->time_per_step = (60000000 / (rpm * steps_per_rev)); 
 }
 
+void Joint::setDir(int dir) {
+    this->direction = dir;
+
+    if (dir != 0) {
+        digitalWrite(this->dir_pin, (dir < 0) ? LOW : HIGH);
+    }
+}
+
 void Joint::setNeededSteps(int steps) {
-    this->needed_steps = steps;
+    this->needed_steps = abs(steps);
+    this->setDir(steps / abs(steps));
     this->isStepping = true;
+    this->next_step_time = micros();
 }
 
 // RotationJoint ----------------------------------------------------
@@ -70,13 +81,20 @@ RotationJoint::RotationJoint(float gear_ratio, int dir_pin, int step_pin, int st
 {
     this->curr_angle = 0;
     this->target_angle = 0;
+
+    this->step_angle = (360 / this->steps_per_rev) * this->gear_ratio;
 }
 
-void RotationJoint::step_angle(float angle) {
-    float step_angle = 360 / this->steps_per_rev;
-    float num_steps = angle / step_angle;
+void RotationJoint::step_motor_angle(float angle) {
+    float num_steps = angle / this->step_angle;
 
     this->step_motor(num_steps);
+}
+
+void RotationJoint::update() {
+    Joint::update();
+
+    this->curr_angle += this->step_angle;
 }
 
 float RotationJoint::getCurrAngle() { return this->curr_angle; }
@@ -85,7 +103,16 @@ float RotationJoint::getTargetAngle() { return this->target_angle; }
 
 float RotationJoint::getGearRatio() { return this->gear_ratio; }
 
-void RotationJoint::setTargetAngle(float angle) { this->target_angle = angle; }
+void RotationJoint::setTargetAngle(float angle) { 
+    this->target_angle = angle;
+
+    float delta_angle = this->target_angle - this->curr_angle;
+
+    float step_angle = (360 / this->steps_per_rev) * this->gear_ratio;
+    float num_steps = delta_angle / step_angle;
+
+    this->setNeededSteps(num_steps);
+}
 
 
 // Linear Joint -----------------------------------------------------------
@@ -109,5 +136,3 @@ float LinearJoint::getTargetPos() { return this->target_pos; }
 float LinearJoint::getMMPerStep() { return this->mmPerStep; }
 
 void LinearJoint::setTargetPos(float pos) { this->target_pos = pos; }
-
-
