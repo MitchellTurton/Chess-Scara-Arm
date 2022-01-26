@@ -1,7 +1,10 @@
 #include <Joint.hpp>
 
 // Parent Joint Class ------------------------------------------------
-Joint::Joint(int dir_pin, int step_pin, int steps_per_rev, int rpm=120) {
+Joint::Joint() {
+}
+
+Joint::Joint(int dir_pin, int step_pin, int steps_per_rev, int rpm=240) {
     this->step_pin = step_pin;
     this->dir_pin = dir_pin;
     this->direction = 0;
@@ -16,15 +19,18 @@ Joint::Joint(int dir_pin, int step_pin, int steps_per_rev, int rpm=120) {
 }
 
 void Joint::step_motor(int numSteps) {
-    Serial.println("HI");
+    // Serial.println("HI");
 
     digitalWrite(this->dir_pin, (numSteps < 0) ? LOW : HIGH);
 
     for (int i = 0; i < abs(numSteps); i++) {
-        digitalWrite(this->step_pin, HIGH);
-        delayMicroseconds(this->time_per_step);
-        digitalWrite(this->step_pin, LOW);
-        delayMicroseconds(this->time_per_step);
+
+        if (digitalRead(12) == HIGH) {
+            digitalWrite(this->step_pin, HIGH);
+            delayMicroseconds(this->time_per_step);
+            digitalWrite(this->step_pin, LOW);
+            delayMicroseconds(this->time_per_step);
+        }
     }
 }
 
@@ -76,19 +82,47 @@ void Joint::setNeededSteps(int steps) {
 
 // RotationJoint ----------------------------------------------------
 
-RotationJoint::RotationJoint(float gear_ratio, int dir_pin, int step_pin, int steps_per_rev, int rpm=120) 
+RotationJoint::RotationJoint() { 
+}
+
+RotationJoint::RotationJoint(float gear_ratio, int dir_pin, int step_pin, int steps_per_rev, int rpm=240) 
     : Joint(dir_pin, step_pin, steps_per_rev, rpm)
 {
-    this->curr_angle = 0;
+    this->curr_angle = 0.f;
     this->target_angle = 0;
+    this->gear_ratio = gear_ratio;
 
-    this->step_angle = (360 / this->steps_per_rev) * this->gear_ratio;
+    this->step_angle = 360 / (this->steps_per_rev * this->gear_ratio);
+
+    Serial.println(String(dir_pin) + " Step Angle: " + String(this->step_angle) + " Steps per rev: " + String(this->steps_per_rev) + " Gear Ratio: " + String(this->gear_ratio));
 }
 
 void RotationJoint::step_motor_angle(float angle) {
     float num_steps = angle / this->step_angle;
 
+    // Serial.println(num_steps);
+
     this->step_motor(num_steps);
+}
+
+void RotationJoint::step_motor_toangle(float target_angle) {
+
+    Serial.println("J" + String(this->dir_pin/2) + " stepping to: " + String(target_angle));
+    float delta_angle = target_angle - this->curr_angle;
+
+    int num_steps = round(delta_angle / this->step_angle);
+
+    this->step_motor(num_steps);
+
+    this->curr_angle += num_steps * this->step_angle;
+}
+
+void RotationJoint::step_motor_toangle() {
+    float delta_angle = this->target_angle - this->curr_angle;
+
+    this->step_motor_angle(delta_angle);
+
+    this->curr_angle = this->target_angle;
 }
 
 void RotationJoint::update() {
@@ -103,26 +137,34 @@ float RotationJoint::getTargetAngle() { return this->target_angle; }
 
 float RotationJoint::getGearRatio() { return this->gear_ratio; }
 
+void RotationJoint::setCurrAngle(float angle) { this->curr_angle = angle; }
+
 void RotationJoint::setTargetAngle(float angle) { 
     this->target_angle = angle;
 
-    float delta_angle = this->target_angle - this->curr_angle;
+    // float delta_angle = this->target_angle - this->curr_angle;
 
-    float step_angle = (360 / this->steps_per_rev) * this->gear_ratio;
-    float num_steps = delta_angle / step_angle;
+    // float step_angle = (360 / this->steps_per_rev) * this->gear_ratio;
+    // float num_steps = delta_angle / step_angle;
 
-    this->setNeededSteps(num_steps);
+    // this->setNeededSteps(num_steps);
 }
 
 
 // Linear Joint -----------------------------------------------------------
 
-LinearJoint::LinearJoint(int mmPerRev, int dir_pin, int step_pin, int steps_per_rev, int rpm=120) 
+LinearJoint::LinearJoint() {
+
+}
+
+LinearJoint::LinearJoint(int mmPerRev, int dir_pin, int step_pin, int steps_per_rev, int rpm=240) 
     : Joint(dir_pin, step_pin, steps_per_rev, rpm)
 {
-    this->mmPerStep = mmPerRev / this->steps_per_rev;
+    this->mmPerStep = ((float) mmPerRev) / ((float) steps_per_rev);
     this->curr_pos = 0;
     this->target_pos = 0;
+
+    Serial.println("Elevator mmPerStep: " + String(this->mmPerStep));
 }
 
 void LinearJoint::step_dist(float distance) {
@@ -131,8 +173,21 @@ void LinearJoint::step_dist(float distance) {
     this->step_motor(num_steps);
 }
 
+void LinearJoint::step_to_pos(float target_pos) {
+    float delta_dist = target_pos - this->curr_pos;
+
+    int num_steps = round(delta_dist / this->mmPerStep);
+
+    Serial.println("Num Steps: " + String(num_steps));
+
+    this->step_motor(num_steps);
+
+    this->curr_pos += num_steps * this->mmPerStep;
+}
+
 float LinearJoint::getCurrPos() { return this->curr_pos; }
 float LinearJoint::getTargetPos() { return this->target_pos; }
 float LinearJoint::getMMPerStep() { return this->mmPerStep; }
 
+void LinearJoint::setCurrPos(float pos) { this->curr_pos = pos; }
 void LinearJoint::setTargetPos(float pos) { this->target_pos = pos; }
